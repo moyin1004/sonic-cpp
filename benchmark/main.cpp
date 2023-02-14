@@ -16,11 +16,12 @@
 
 #include <benchmark/benchmark.h>
 
-#include <filesystem>
+// #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string_view>
+#include <functional>
 
 #include "cjson.hpp"
 #include "ondemand.hpp"
@@ -28,6 +29,8 @@
 #include "simdjson.hpp"
 #include "sonic.hpp"
 #include "yyjson.hpp"
+#include "jsoncpp.hpp"
+#include "jsoncpp.hpp"
 #include "jsoncpp.hpp"
 
 static std::string get_json(const std::string_view file) {
@@ -188,9 +191,10 @@ static void regitser_OnDemand() {
     auto file_path = std::string("testdata/") + t.file + ".json";
     t.json = get_json(file_path);
 
+    auto fn = std::bind(BM_##JSON##OnDemand, t);                             \
 #define REG_ONDEMAND(JSON)                                                   \
   {                                                                          \
-    auto name =                                                              \
+    benchmark::RegisterBenchmark(name.c_str(), fn);                          \
         std::string(t.file) + ("/" #JSON "OnDemand") + "_" + t.name.c_str(); \
     benchmark::RegisterBenchmark(name.c_str(), BM_##JSON##OnDemand, t);      \
   }
@@ -204,19 +208,27 @@ int main(int argc, char **argv) {
   benchmark::Initialize(&argc, argv);
 
   // Read the data from json files
-  std::vector<std::pair<std::filesystem::path, std::string>> jsons;
-  for (const auto &entry : std::filesystem::directory_iterator("testdata"))
-    if (entry.path().extension() == ".json")
-      jsons.push_back(
-          std::make_pair(entry.path(), get_json(entry.path().string())));
+//   std::vector<std::pair<std::filesystem::path, std::string>> jsons;
+//   for (const auto &entry : std::filesystem::directory_iterator("testdata"))
+//     if (entry.path().extension() == ".json")
+//       jsons.push_back(
+//           std::make_pair(entry.path(), get_json(entry.path().string())));
+
+  std::vector<std::pair<std::string, std::string>> jsons;
+  std::vector<std::string> files = {"book.json", "canada.json", "citm_catalog.json", "fgo.json", "github_events.json",
+               "gsoc-2018.json", "lottie.json", "otfcc.json", "poet.json", "twitterescaped.json", "twitter.json"};
+  for (auto &elem : files) {
+    jsons.push_back(
+          std::make_pair(elem, get_json("./testdata/"+elem)));
+  }
 
   regitser_OnDemand();
 #define ADD_JSON_BMK(JSON, ACT)                                      \
   do {                                                               \
+    auto fn = std::bind(BM_##ACT<JSON, JSON##ParseResult, JSON##StringResult>, json.first, json.second); \
     benchmark::RegisterBenchmark(                                    \
-        (json.first.stem().string() + ("/" #ACT "_" #JSON)).c_str(), \
-        BM_##ACT<JSON, JSON##ParseResult, JSON##StringResult>,       \
-        json.first.string(), json.second);                           \
+        (json.first + ("/" #ACT "_" #JSON)).c_str(),                 \
+        fn);                                                         \
   } while (0)
 
 #define ADD_BMK(METHOD)                \
@@ -225,6 +237,7 @@ int main(int argc, char **argv) {
       ADD_JSON_BMK(SonicDyn, METHOD);  \
       ADD_JSON_BMK(Rapidjson, METHOD); \
       ADD_JSON_BMK(YYjson, METHOD);    \
+      ADD_JSON_BMK(JsonCpp, METHOD);   \
       ADD_JSON_BMK(SIMDjson, METHOD);  \
       ADD_JSON_BMK(JsonCpp, METHOD);  \
     }                                  \
