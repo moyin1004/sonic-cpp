@@ -8,6 +8,7 @@ set(COMPILE_FLAGS -O3 -DNDEBUG -g -mavx2 -mpclmul -mbmi -mlzcnt)
 
 include("${PROJECT_SOURCE_DIR}/cmake/external.cmake")
 
+unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY CACHE)
 add_executable(bench "${BENCH_SRC}")
 
 set(EP_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/external/)

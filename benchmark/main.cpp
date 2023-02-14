@@ -191,12 +191,12 @@ static void regitser_OnDemand() {
     auto file_path = std::string("testdata/") + t.file + ".json";
     t.json = get_json(file_path);
 
-    auto fn = std::bind(BM_##JSON##OnDemand, t);                             \
 #define REG_ONDEMAND(JSON)                                                   \
   {                                                                          \
-    benchmark::RegisterBenchmark(name.c_str(), fn);                          \
+    auto fn = std::bind(BM_##JSON##OnDemand, std::placeholders::_1, t);      \
+    auto name =                                                              \
         std::string(t.file) + ("/" #JSON "OnDemand") + "_" + t.name.c_str(); \
-    benchmark::RegisterBenchmark(name.c_str(), BM_##JSON##OnDemand, t);      \
+    benchmark::RegisterBenchmark(name.c_str(), fn);                          \
   }
     REG_ONDEMAND(Sonic);
     REG_ONDEMAND(RapidjsonSax);
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
   regitser_OnDemand();
 #define ADD_JSON_BMK(JSON, ACT)                                      \
   do {                                                               \
-    auto fn = std::bind(BM_##ACT<JSON, JSON##ParseResult, JSON##StringResult>, json.first, json.second); \
+    auto fn = std::bind(BM_##ACT<JSON, JSON##ParseResult, JSON##StringResult>, std::placeholders::_1, json.first, json.second); \
     benchmark::RegisterBenchmark(                                    \
         (json.first + ("/" #ACT "_" #JSON)).c_str(),                 \
         fn);                                                         \
@@ -237,7 +237,6 @@ int main(int argc, char **argv) {
       ADD_JSON_BMK(SonicDyn, METHOD);  \
       ADD_JSON_BMK(Rapidjson, METHOD); \
       ADD_JSON_BMK(YYjson, METHOD);    \
-      ADD_JSON_BMK(JsonCpp, METHOD);   \
       ADD_JSON_BMK(SIMDjson, METHOD);  \
       ADD_JSON_BMK(JsonCpp, METHOD);  \
     }                                  \
